@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(rm:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(where flutter)",
+      "Read(//c//**)",
+      "Read(//c/**)",
+      "Bash(where flutter.bat)",
+      "Bash(ls:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(flutter:*)",
+      "Bash(C:srcflutterbinflutter.bat pub get)",
+      "Bash(start pol_photo.exe)",
+      "Bash(C:srcflutterbinflutter.bat build windows --release)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
