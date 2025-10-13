@@ -1,7 +1,9 @@
 import 'package:get_it/get_it.dart';
 import '../../data/datasources/photo_local_datasource.dart';
 import '../../data/repositories/photo_repository_impl.dart';
+import '../../data/repositories/settings_repository_impl.dart';
 import '../../domain/repositories/photo_repository.dart';
+import '../../domain/repositories/settings_repository.dart';
 import '../../domain/usecases/photo_usecases.dart';
 import '../../domain/usecases/layout_usecases.dart';
 import '../../presentation/bloc/photo_editor_bloc.dart';
@@ -34,6 +36,9 @@ Future<void> init() async {
   // Repositories
   sl.registerLazySingleton<PhotoRepository>(
     () => PhotoRepositoryImpl(localDataSource: sl()),
+  );
+  sl.registerLazySingleton<SettingsRepository>(
+    () => SettingsRepositoryImpl(),
   );
 
   // Data sources

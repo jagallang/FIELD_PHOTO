@@ -1,17 +1,18 @@
-import 'dart:io';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:file_picker/file_picker.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/io_helper.dart';
+import '../../../core/di/injection_container.dart' as di;
+import '../../../domain/repositories/settings_repository.dart';
 import '../../bloc/photo_editor_bloc.dart';
 import '../../widgets/editor/photo_grid.dart';
 import '../../widgets/dialogs/photo_source_dialog.dart';
@@ -28,6 +29,26 @@ class PhotoEditorScreen extends StatefulWidget {
 class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
   final List<GlobalKey> _repaintBoundaryKeys = [];
   String? _customSavePath;
+  SettingsRepository? _settingsRepository;
+
+  @override
+  void initState() {
+    super.initState();
+    if (supportsLocalFileSystem) {
+      _settingsRepository = di.sl<SettingsRepository>();
+      _loadSavedPath();
+    }
+  }
+
+  Future<void> _loadSavedPath() async {
+    try {
+      final savedPath = await _settingsRepository?.getSavePath();
+      if (!mounted || savedPath == null || savedPath.isEmpty) return;
+      setState(() {
+        _customSavePath = savedPath;
+      });
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -527,13 +548,12 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
 
   Future<void> _openSaveFolder(BuildContext context) async {
     try {
-      final directory = _customSavePath != null
-          ? Directory(_customSavePath!)
-          : await getApplicationDocumentsDirectory();
-      final folderPath = directory.path;
+      if (!supportsLocalFileSystem) {
+        throw UnsupportedError('File system access is not supported on this platform');
+      }
 
-      // Windows에서 폴더 열기
-      await Process.run('explorer', [folderPath]);
+      final folderPath = await resolveSaveDirectory(_customSavePath);
+      await openSystemFolder(folderPath);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -557,12 +577,17 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
 
   Future<void> _changeSaveLocation(BuildContext context) async {
     try {
+      if (!supportsLocalFileSystem) {
+        throw UnsupportedError('File system access is not supported on this platform');
+      }
+
       String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
 
       if (selectedDirectory != null) {
         setState(() {
           _customSavePath = selectedDirectory;
         });
+        await _settingsRepository?.setSavePath(selectedDirectory);
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -634,6 +659,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
 
   Future<void> _saveLayoutAsImage(BuildContext context, PhotoEditorBloc bloc) async {
     try {
+      if (!supportsLocalFileSystem) {
+        throw UnsupportedError('File system access is not supported on this platform');
+      }
       // 렌더링이 완료될 때까지 대기
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -641,9 +669,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
         throw Exception('No pages to save');
       }
 
-      final directory = _customSavePath != null
-          ? Directory(_customSavePath!)
-          : await getApplicationDocumentsDirectory();
+      final directoryPath = await resolveSaveDirectory(_customSavePath);
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       int savedCount = 0;
 
@@ -657,10 +683,8 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
         if (byteData == null) continue;
 
         final pngBytes = byteData.buffer.asUint8List();
-        final filePath = '${directory.path}${Platform.pathSeparator}layout_page${i + 1}_$timestamp.png';
-
-        final file = File(filePath);
-        await file.writeAsBytes(pngBytes);
+        final filePath = joinPath(directoryPath, 'layout_page${i + 1}_$timestamp.png');
+        await writeBytesToFile(pngBytes, filePath);
         savedCount++;
       }
 
@@ -724,6 +748,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
 
   Future<void> _saveLayoutAsPdf(BuildContext context, PhotoEditorBloc bloc) async {
     try{
+      if (!supportsLocalFileSystem) {
+        throw UnsupportedError('File system access is not supported on this platform');
+      }
       // 렌더링이 완료될 때까지 대기
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -762,13 +789,10 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
       }
 
       final pdfBytes = await pdf.save();
-      final directory = _customSavePath != null
-          ? Directory(_customSavePath!)
-          : await getApplicationDocumentsDirectory();
+      final directoryPath = await resolveSaveDirectory(_customSavePath);
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final filePath = '${directory.path}${Platform.pathSeparator}layout_$timestamp.pdf';
-      final file = File(filePath);
-      await file.writeAsBytes(pdfBytes);
+      final filePath = joinPath(directoryPath, 'layout_$timestamp.pdf');
+      await writeBytesToFile(pdfBytes, filePath);
 
       if (context.mounted) {
         // 성공 알림 다이얼로그 표시

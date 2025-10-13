@@ -1,8 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import '../../../core/utils/io_helper.dart';
+import 'smart_image_local_stub.dart'
+    if (dart.library.io) 'smart_image_local.dart';
 
 /// Smart image widget that handles various image sources
 class SmartImage extends StatelessWidget {
@@ -204,16 +206,16 @@ class _LocalFileImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // On desktop platforms, use Image.file for local file paths
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      return Image.file(
-        File(path),
+    // On IO-capable platforms, use Image.file for local file paths
+    if (!kIsWeb && supportsLocalFileSystem) {
+      return buildLocalFileImage(
+        path: path,
         fit: fit,
         width: width,
         height: height,
         cacheWidth: cacheWidth,
         cacheHeight: cacheHeight,
-        errorBuilder: (context, error, stackTrace) => _ErrorWidget(
+        errorWidget: _ErrorWidget(
           width: width,
           height: height,
         ),

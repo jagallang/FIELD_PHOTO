@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -16,7 +15,8 @@ class PhotoSourceDialog extends StatelessWidget {
   bool get _isCameraAvailable {
     // Camera is not available on desktop platforms
     if (kIsWeb) return false;
-    return !Platform.isWindows && !Platform.isLinux && !Platform.isMacOS;
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
   }
 
   @override

@@ -1,58 +1,34 @@
-# Field Photo 1.0
+# FIELD PHOTO
 
-**사진 레이아웃 및 PDF 생성 도구**
-
-Field Photo는 현장 작업자들을 위한 간편한 사진 편집 및 문서화 도구입니다. 여러 장의 사진을 A4 용지에 맞게 배치하고, 이미지나 PDF로 내보낼 수 있습니다.
+FIELD PHOTO는 Flutter 기반의 데스크톱·웹용 사진 레이아웃 편집 도구입니다. 여러 장의 사진을 불러와 레이아웃을 구성하고 이미지 또는 PDF로 저장·공유할 수 있으며, 한글/영어 다국어 UI를 지원합니다.
 
 ## 주요 기능
+- 사진 단일/다중 선택 및 레이아웃 자동 배치
+- 제목, 캡션, 페이지 번호 등 레이아웃 세부 옵션 제공
+- PDF/PNG 저장 및 공유 (윈도우·맥·리눅스, 웹)
+- 사용자 지정 저장 폴더 기억 및 빠른 접근
+- 다크 모드와 반응형 UI
 
-### 📸 사진 레이아웃
-- 다양한 분할 옵션: 1분할, 2분할, 3분할, 4분할 레이아웃 지원
-- 드래그 앤 드롭: 사진 순서를 쉽게 변경
-- 이미지 편집: 확대/축소, 회전, 위치 조정
-- 캡션 추가: 각 사진에 설명 텍스트 추가
+## 설치 및 실행
+```bash
+git clone https://github.com/jagallang/FIELD_PHOTO.git
+cd FIELD_PHOTO
+flutter pub get
+flutter run -d windows   # macOS: -d macos, Linux: -d linux, Web: -d chrome
+```
 
-### 📄 내보내기
-- 이미지 저장: 고해상도 PNG 이미지로 저장
-- PDF 생성: A4 크기의 PDF 문서로 변환
-- PDF 합치기: 여러 사진을 하나의 PDF로 통합
+## 빌드
+```bash
+flutter build windows  # 또는 macos / linux / web
+```
 
-### 🎨 사용자 편의성
-- A4 프리뷰: 인쇄될 모습을 실시간으로 확인
-- 순백색 배경: 깔끔한 인쇄 품질
-- 저장 위치 설정: 원하는 폴더에 파일 저장
-- 한국어/영어 지원
+## 개발 가이드
+- `lib/core/utils/io_helper.dart`는 파일 시스템 접근을 추상화하여 플랫폼별 예외를 최소화합니다.
+- 저장 경로는 `SettingsRepository`를 통해 지속적으로 관리됩니다.
+- 에디터 UI는 `PhotoEditorScreen`, `PhotoGrid` 위젯을 중심으로 구현되어 있습니다.
 
-## 시스템 요구사항
-
-- Windows 10 이상 (64비트)
-- 최소 100MB 디스크 공간
-- 4GB RAM 권장
-
-## 설치 방법
-
-1. Releases 페이지에서 최신 버전 다운로드
-2. FieldPhoto_1.0_Windows.zip 압축 해제
-3. pol_photo.exe 실행
-4. 별도 설치 과정 불필요
-
-## 라이센스
-
-### 개인 사용 (무료)
-개인 프로젝트, 취미, 교육, 비영리 활동에 무료로 사용 가능
-
-### 기업/상업적 사용
-별도 라이센스 필요
-문의: episode0611@gmail.com
-
-## 개인정보 보호
-
-- 모든 데이터는 로컬 기기에만 저장
-- 외부 서버로 데이터 전송 없음
-- 네트워크 연결 불필요
-
-## 문의
-
-이메일: episode0611@gmail.com
-
-© 2025 Field Photo. All rights reserved.
+## 릴리스 절차
+1. 변경 사항을 `git status`로 확인 후 스테이징
+2. `git commit -m "feat: ..."`으로 커밋
+3. `git tag v1.1.0`
+4. 원격 저장소에 push: `git push origin main --tags`

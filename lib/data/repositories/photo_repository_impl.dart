@@ -1,8 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -11,6 +10,7 @@ import '../../domain/repositories/photo_repository.dart';
 import '../datasources/photo_local_datasource.dart';
 import '../../core/utils/logger.dart';
 import '../../core/errors/exceptions.dart';
+import '../../core/utils/io_helper.dart';
 
 class PhotoRepositoryImpl implements PhotoRepository {
   final PhotoLocalDataSource localDataSource;
@@ -72,12 +72,10 @@ class PhotoRepositoryImpl implements PhotoRepository {
       AppLogger.debug('Attempting to save photo: $filename', 'PhotoRepository');
       if (kIsWeb) {
         await localDataSource.savePhotoWeb(bytes, filename);
-      } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-        // Desktop platforms: Save to Documents folder
-        final directory = await getApplicationDocumentsDirectory();
-        final filePath = '${directory.path}${Platform.pathSeparator}$filename';
-        final file = File(filePath);
-        await file.writeAsBytes(bytes);
+      } else if (supportsLocalFileSystem) {
+        final directoryPath = await resolveSaveDirectory(null);
+        final filePath = joinPath(directoryPath, filename);
+        await writeBytesToFile(bytes, filePath);
         AppLogger.info('Photo saved to: $filePath', 'PhotoRepository');
       } else {
         // Mobile platforms (Android/iOS) - not supported in Windows build
@@ -139,11 +137,10 @@ class PhotoRepositoryImpl implements PhotoRepository {
       final pdfBytes = await pdf.save();
 
       // Save directly to file system on desktop platforms
-      if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-        final directory = await getApplicationDocumentsDirectory();
-        final filePath = '${directory.path}${Platform.pathSeparator}$filename';
-        final file = File(filePath);
-        await file.writeAsBytes(pdfBytes);
+      if (!kIsWeb && supportsLocalFileSystem) {
+        final directoryPath = await resolveSaveDirectory(null);
+        final filePath = joinPath(directoryPath, filename);
+        await writeBytesToFile(pdfBytes, filePath);
         AppLogger.info('PDF saved to: $filePath', 'PhotoRepository');
       } else {
         // Fallback to sharing for web or mobile
@@ -165,9 +162,23 @@ class PhotoRepositoryImpl implements PhotoRepository {
   Future<void> sharePhoto(Uint8List bytes, String filename) async {
     try {
       AppLogger.debug('Sharing photo: $filename', 'PhotoRepository');
+      final pdf = pw.Document();
+      final image = pw.MemoryImage(bytes);
+
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (context) => pw.Center(
+            child: pw.Image(image, fit: pw.BoxFit.contain),
+          ),
+        ),
+      );
+
+      final pdfBytes = await pdf.save();
+
       await Printing.sharePdf(
-        bytes: bytes,
-        filename: filename,
+        bytes: pdfBytes,
+        filename: filename.toLowerCase().endsWith('.pdf') ? filename : '$filename.pdf',
       );
       AppLogger.info('Photo shared successfully: $filename', 'PhotoRepository');
     } catch (e) {
