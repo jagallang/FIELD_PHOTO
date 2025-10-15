@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import '../../../core/utils/io_helper.dart';
+import '../../../core/di/injection_container.dart' as di;
+import '../../../domain/repositories/settings_repository.dart';
 import 'smart_image_local_stub.dart'
     if (dart.library.io) 'smart_image_local.dart';
 
@@ -208,17 +210,25 @@ class _LocalFileImage extends StatelessWidget {
   Widget build(BuildContext context) {
     // On IO-capable platforms, use Image.file for local file paths
     if (!kIsWeb && supportsLocalFileSystem) {
-      return buildLocalFileImage(
-        path: path,
-        fit: fit,
-        width: width,
-        height: height,
-        cacheWidth: cacheWidth,
-        cacheHeight: cacheHeight,
-        errorWidget: _ErrorWidget(
-          width: width,
-          height: height,
-        ),
+      // FutureBuilder로 품질 설정을 가져와서 적용
+      return FutureBuilder<String>(
+        future: di.sl<SettingsRepository>().getImageQuality(),
+        builder: (context, snapshot) {
+          final quality = snapshot.data ?? 'low'; // 기본값: 저화질
+          return buildLocalFileImage(
+            path: path,
+            fit: fit,
+            width: width,
+            height: height,
+            cacheWidth: cacheWidth,
+            cacheHeight: cacheHeight,
+            quality: quality, // 품질 설정 전달
+            errorWidget: _ErrorWidget(
+              width: width,
+              height: height,
+            ),
+          );
+        },
       );
     }
 

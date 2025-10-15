@@ -4,6 +4,7 @@ import '../../core/utils/logger.dart';
 
 class SettingsRepositoryImpl implements SettingsRepository {
   static const String _savePathKey = 'custom_save_path';
+  static const String _imageQualityKey = 'image_quality';
 
   @override
   Future<String?> getSavePath() async {
@@ -38,6 +39,31 @@ class SettingsRepositoryImpl implements SettingsRepository {
       AppLogger.info('Save path cleared', 'SettingsRepository');
     } catch (e) {
       AppLogger.error('Failed to clear save path', e, null, 'SettingsRepository');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<String> getImageQuality() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final quality = prefs.getString(_imageQualityKey) ?? 'low'; // 기본값: 저화질
+      AppLogger.debug('Retrieved image quality: $quality', 'SettingsRepository');
+      return quality;
+    } catch (e) {
+      AppLogger.error('Failed to get image quality', e, null, 'SettingsRepository');
+      return 'low'; // 오류 시에도 저화질 반환
+    }
+  }
+
+  @override
+  Future<void> setImageQuality(String quality) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_imageQualityKey, quality);
+      AppLogger.info('Image quality set to: $quality', 'SettingsRepository');
+    } catch (e) {
+      AppLogger.error('Failed to set image quality', e, null, 'SettingsRepository');
       rethrow;
     }
   }

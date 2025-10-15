@@ -12,3 +12,8 @@ Future<void> ioOpenSystemFolder(String path) =>
     Future.error(UnsupportedError('File system access is not available on this platform'));
 
 bool get ioSupportsLocalFileSystem => false;
+
+// Stub for web-specific download function (never called on non-web platforms)
+void downloadImageOnWeb(Uint8List bytes, String filename) {
+  throw UnsupportedError('Web download is not available on this platform');
+}

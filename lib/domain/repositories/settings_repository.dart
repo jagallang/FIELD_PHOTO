@@ -9,4 +9,13 @@ abstract class SettingsRepository {
 
   /// Clear the custom save path (revert to default)
   Future<void> clearSavePath();
+
+  /// Get the image quality setting
+  /// Returns 'low', 'medium', or 'high'
+  /// Default is 'low' for better performance
+  Future<String> getImageQuality();
+
+  /// Set the image quality setting
+  /// Valid values: 'low', 'medium', 'high'
+  Future<void> setImageQuality(String quality);
 }

@@ -48,3 +48,18 @@ app.*.map.json
 /android/key.properties
 /android/*.jks
 /android/*.keystore
+
+# Backup files
+**/*_old.dart
+**/*_backup.dart
+**/*_clean.dart
+*.backup
+*.bak
+
+# Claude Code
+.claude/
+
+# Release packages
+*.zip
+POL_PHOTO_*/
+FIELD_PHOTO_*/

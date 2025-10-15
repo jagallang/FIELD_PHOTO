@@ -1,6 +1,6 @@
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -18,6 +18,7 @@ import '../../widgets/editor/photo_grid.dart';
 import '../../widgets/dialogs/photo_source_dialog.dart';
 import '../../widgets/dialogs/layout_settings_dialog.dart';
 import '../settings/settings_screen.dart';
+import '../../../web_helper.dart' if (dart.library.io) '../../../core/utils/io_helper_stub.dart';
 
 class PhotoEditorScreen extends StatefulWidget {
   const PhotoEditorScreen({super.key});
@@ -398,7 +399,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                           ),
                         ],
                       ),
-                      VerticalDivider(width: 1, color: AppTheme.white.withOpacity(0.3)),
+                      VerticalDivider(width: 1, color: AppTheme.white.withValues(alpha: 0.3)),
                       // Rotation Controls
                       Column(
                         children: [
@@ -420,7 +421,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                           ),
                         ],
                       ),
-                      VerticalDivider(width: 1, color: AppTheme.white.withOpacity(0.3)),
+                      VerticalDivider(width: 1, color: AppTheme.white.withValues(alpha: 0.3)),
                       // Delete Control
                       Column(
                         children: [
@@ -433,7 +434,7 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
                           ),
                         ],
                       ),
-                      VerticalDivider(width: 1, color: AppTheme.white.withOpacity(0.3)),
+                      VerticalDivider(width: 1, color: AppTheme.white.withValues(alpha: 0.3)),
                       // Delete All Photos Control
                       Column(
                         children: [
@@ -658,18 +659,20 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
   }
 
   Future<void> _saveLayoutAsImage(BuildContext context, PhotoEditorBloc bloc) async {
+    // 현재 선택 상태 저장
+    final previousSelection = bloc.selectedPhotoIndex;
+
     try {
-      if (!supportsLocalFileSystem) {
-        throw UnsupportedError('File system access is not supported on this platform');
-      }
-      // 렌더링이 완료될 때까지 대기
-      await Future.delayed(const Duration(milliseconds: 100));
+      // 저장 전 선택 상태 해제하여 테두리가 포함되지 않도록 함
+      bloc.selectPhoto(null);
+
+      // UI 렌더링이 완료될 때까지 충분히 대기
+      await Future.delayed(const Duration(milliseconds: 200));
 
       if (_repaintBoundaryKeys.isEmpty) {
         throw Exception('No pages to save');
       }
 
-      final directoryPath = await resolveSaveDirectory(_customSavePath);
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       int savedCount = 0;
 
@@ -683,10 +686,26 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
         if (byteData == null) continue;
 
         final pngBytes = byteData.buffer.asUint8List();
-        final filePath = joinPath(directoryPath, 'layout_page${i + 1}_$timestamp.png');
-        await writeBytesToFile(pngBytes, filePath);
-        savedCount++;
+        final filename = 'layout_page${i + 1}_$timestamp.png';
+
+        // 웹과 데스크톱 분기 처리
+        if (kIsWeb) {
+          // 웹: 브라우저 다운로드
+          downloadImageOnWeb(pngBytes, filename);
+          savedCount++;
+        } else if (supportsLocalFileSystem) {
+          // 데스크톱: 파일 시스템 저장
+          final directoryPath = await resolveSaveDirectory(_customSavePath);
+          final filePath = joinPath(directoryPath, filename);
+          await writeBytesToFile(pngBytes, filePath);
+          savedCount++;
+        } else {
+          throw UnsupportedError('File saving is not supported on this platform');
+        }
       }
+
+      // 이전 선택 상태 복원
+      bloc.selectPhoto(previousSelection);
 
       if (context.mounted) {
         if (savedCount > 0) {
@@ -734,6 +753,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
         }
       }
     } catch (e) {
+      // 오류 발생 시에도 이전 선택 상태 복원
+      bloc.selectPhoto(previousSelection);
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -747,12 +769,15 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
   }
 
   Future<void> _saveLayoutAsPdf(BuildContext context, PhotoEditorBloc bloc) async {
+    // 현재 선택 상태 저장
+    final previousSelection = bloc.selectedPhotoIndex;
+
     try{
-      if (!supportsLocalFileSystem) {
-        throw UnsupportedError('File system access is not supported on this platform');
-      }
-      // 렌더링이 완료될 때까지 대기
-      await Future.delayed(const Duration(milliseconds: 100));
+      // 저장 전 선택 상태 해제하여 테두리가 포함되지 않도록 함
+      bloc.selectPhoto(null);
+
+      // UI 렌더링이 완료될 때까지 충분히 대기
+      await Future.delayed(const Duration(milliseconds: 200));
 
       if (_repaintBoundaryKeys.isEmpty) {
         throw Exception('No pages to save');
@@ -789,10 +814,24 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
       }
 
       final pdfBytes = await pdf.save();
-      final directoryPath = await resolveSaveDirectory(_customSavePath);
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final filePath = joinPath(directoryPath, 'layout_$timestamp.pdf');
-      await writeBytesToFile(pdfBytes, filePath);
+      final filename = 'layout_$timestamp.pdf';
+
+      // 웹과 데스크톱 분기 처리
+      if (kIsWeb) {
+        // 웹: 브라우저 다운로드
+        downloadImageOnWeb(pdfBytes, filename);
+      } else if (supportsLocalFileSystem) {
+        // 데스크톱: 파일 시스템 저장
+        final directoryPath = await resolveSaveDirectory(_customSavePath);
+        final filePath = joinPath(directoryPath, filename);
+        await writeBytesToFile(pdfBytes, filePath);
+      } else {
+        throw UnsupportedError('File saving is not supported on this platform');
+      }
+
+      // 이전 선택 상태 복원
+      bloc.selectPhoto(previousSelection);
 
       if (context.mounted) {
         // 성공 알림 다이얼로그 표시
@@ -836,6 +875,9 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
         });
       }
     } catch (e) {
+      // 오류 발생 시에도 이전 선택 상태 복원
+      bloc.selectPhoto(previousSelection);
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -854,16 +896,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
       bloc.layoutConfig,
       (config) => bloc.updateLayoutConfig(config),
     );
-  }
-
-  void _onPhotoTap(BuildContext context, PhotoEditorBloc bloc, int index) {
-    if (index < bloc.photos.length) {
-      // Show photo options (replace, remove, etc.)
-      _showPhotoOptions(context, bloc, index);
-    } else {
-      // Add new photo
-      _showPhotoSourceDialog(context, bloc);
-    }
   }
 
   void _onPhotoLongPress(BuildContext context, PhotoEditorBloc bloc, int index) {
@@ -909,46 +941,6 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
       context,
       MaterialPageRoute(builder: (context) => const SettingsScreen()),
     );
-  }
-
-  void _saveAsImage(BuildContext context, PhotoEditorBloc bloc) async {
-    if (bloc.photos.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('no_photos_added'.tr()),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    final success = await bloc.saveCurrentPhotoAsImage();
-    if (!mounted) return;
-
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('image_saved_successfully'.tr()),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else if (bloc.error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(bloc.error!),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _saveAsPdf(PhotoEditorBloc bloc) async {
-    final success = await bloc.saveAsPdf();
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('pdf_saved_successfully'.tr())),
-      );
-    }
   }
 
   void _createBulkPdf(BuildContext context, PhotoEditorBloc bloc) async {
@@ -1004,31 +996,5 @@ class _PhotoEditorScreenState extends State<PhotoEditorScreen> {
         ),
       );
     }
-  }
-
-  void _clearAllPhotos(BuildContext context, PhotoEditorBloc bloc) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('confirm_clear_all'.tr()),
-        content: Text('clear_all_photos_warning'.tr()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('cancel'.tr()),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              bloc.clearPhotos();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.error,
-            ),
-            child: Text('clear_all'.tr()),
-          ),
-        ],
-      ),
-    );
   }
 }

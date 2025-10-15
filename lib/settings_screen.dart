@@ -1,8 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'core/constants/app_constants.dart';
+import 'core/di/injection_container.dart' as di;
+import 'domain/repositories/settings_repository.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  String _currentQuality = 'low';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuality();
+  }
+
+  Future<void> _loadQuality() async {
+    final repo = di.sl<SettingsRepository>();
+    final quality = await repo.getImageQuality();
+    if (mounted) {
+      setState(() => _currentQuality = quality);
+    }
+  }
+
+  String _getQualityLabel(String quality) {
+    switch (quality) {
+      case 'high':
+        return 'high_quality'.tr();
+      case 'medium':
+        return 'medium_quality'.tr();
+      case 'low':
+      default:
+        return 'low_quality'.tr();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,8 +126,8 @@ class SettingsScreen extends StatelessWidget {
                   _buildDivider(),
                   _buildListTile(
                     icon: Icons.photo_size_select_actual,
-                    title: '기본 저장 품질',
-                    subtitle: '높음',
+                    title: 'default_quality'.tr(),
+                    subtitle: _getQualityLabel(_currentQuality),
                     onTap: () => _showQualityDialog(context),
                   ),
                 ],
@@ -316,43 +352,57 @@ class SettingsScreen extends StatelessWidget {
   void _showQualityDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('저장 품질'),
+      builder: (dialogContext) => AlertDialog(
+        title: Text('select_quality'.tr()),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              title: const Text('높음'),
-              leading: Radio<String>(
-                value: '높음',
-                groupValue: '높음',
-                onChanged: (value) => Navigator.pop(context),
-              ),
-            ),
-            ListTile(
-              title: const Text('중간'),
-              leading: Radio<String>(
-                value: '중간',
-                groupValue: '높음',
-                onChanged: (value) => Navigator.pop(context),
-              ),
-            ),
-            ListTile(
-              title: const Text('낮음'),
-              leading: Radio<String>(
-                value: '낮음',
-                groupValue: '높음',
-                onChanged: (value) => Navigator.pop(context),
-              ),
-            ),
+            _buildQualityOption('low', 'low_quality'.tr(), dialogContext),
+            _buildQualityOption('medium', 'medium_quality'.tr(), dialogContext),
+            _buildQualityOption('high', 'high_quality'.tr(), dialogContext),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('취소'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('cancel'.tr()),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQualityOption(String value, String label, BuildContext dialogContext) {
+    return ListTile(
+      title: Text(label),
+      subtitle: value == 'low'
+          ? const Text('권장 - 빠른 로딩, 낮은 메모리 사용')
+          : value == 'medium'
+              ? const Text('균형잡힌 품질과 성능')
+              : const Text('최고 품질, 느린 로딩'),
+      leading: Radio<String>(
+        value: value,
+        groupValue: _currentQuality,
+        onChanged: (newValue) async {
+          if (newValue != null) {
+            final repo = di.sl<SettingsRepository>();
+            await repo.setImageQuality(newValue);
+            if (mounted) {
+              setState(() => _currentQuality = newValue);
+            }
+            Navigator.pop(dialogContext);
+
+            // 성공 메시지
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('품질이 ${_getQualityLabel(newValue)}(으)로 변경되었습니다'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            }
+          }
+        },
       ),
     );
   }
