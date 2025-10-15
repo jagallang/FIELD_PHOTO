@@ -5,6 +5,18 @@ All notable changes to POL PHOTO will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.34] - 2025-10-16
+
+### Fixed
+- **화질 선택 기능 개선**: 설정 화면에서 화질 선택 시 알림 메시지가 표시되지 않던 문제 수정
+- SnackBar 표시 로직 개선 (context 안정성 향상)
+- 화질 변경 시 즉각적인 UI 업데이트 및 피드백 제공
+
+### Technical
+- settings_screen.dart의 _buildQualityOption 메서드 개선
+- Radio 버튼 onChanged 핸들러 순서 최적화
+- 다이얼로그 닫기 전 메시지 사전 준비로 안정성 향상
+
 ## [1.2.33] - 2025-10-16
 
 ### Added

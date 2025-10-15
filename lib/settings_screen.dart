@@ -385,18 +385,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
         groupValue: _currentQuality,
         onChanged: (newValue) async {
           if (newValue != null) {
+            // 1. Repository에 저장
             final repo = di.sl<SettingsRepository>();
             await repo.setImageQuality(newValue);
+
+            // 2. 상태 업데이트
             if (mounted) {
               setState(() => _currentQuality = newValue);
             }
+
+            // 3. 다이얼로그 닫기 전에 메시지 준비
+            final message = '품질이 ${_getQualityLabel(newValue)}(으)로 변경되었습니다';
+
+            // 4. 다이얼로그 닫기
             Navigator.pop(dialogContext);
 
-            // 성공 메시지
-            if (context.mounted) {
+            // 5. SnackBar 표시 (부모 context 사용)
+            if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('품질이 ${_getQualityLabel(newValue)}(으)로 변경되었습니다'),
+                  content: Text(message),
                   duration: const Duration(seconds: 2),
                 ),
               );
