@@ -5,6 +5,32 @@ All notable changes to POL PHOTO will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.36] - 2025-10-16
+
+### Fixed
+- **SnackBar 표시 문제 완전 해결**: Flutter 권장 패턴(await showDialog)을 사용하여 화질 선택 알림이 안정적으로 표시되도록 수정
+- 다이얼로그가 완전히 닫힌 후 SnackBar가 표시되도록 보장
+- 이전 버전(v1.2.34, v1.2.35)에서 해결되지 않았던 SnackBar 표시 문제 최종 해결
+
+### Technical
+- `_showQualityDialog`를 async 함수로 변경
+- `showDialog<String>`의 Future를 await하여 다이얼로그 완전 종료 보장
+- `Navigator.pop(context, value)`로 선택된 값 반환
+- addPostFrameCallback 제거 (불필요)
+- Flutter 권장 dialog-result 패턴 적용
+
+## [1.2.35] - 2025-10-16
+
+### Fixed
+- **SnackBar 표시 타이밍 개선**: addPostFrameCallback을 사용하여 다이얼로그가 완전히 닫힌 후 SnackBar 표시
+- 화질 선택 시 알림 메시지가 안정적으로 표시되도록 개선
+- Widget tree 재구성 중 context 유효성 문제 해결
+
+### Technical
+- WidgetsBinding.instance.addPostFrameCallback 추가
+- 이중 mounted 체크로 안전성 강화
+- SnackBar 표시 로직 타이밍 최적화
+
 ## [1.2.34] - 2025-10-16
 
 ### Fixed

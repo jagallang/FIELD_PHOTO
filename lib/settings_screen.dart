@@ -349,8 +349,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
   
-  void _showQualityDialog(BuildContext context) {
-    showDialog(
+  Future<void> _showQualityDialog(BuildContext context) async {
+    // showDialog가 반환하는 Future를 await하여 다이얼로그가 완전히 닫힌 후 실행
+    final selectedQuality = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('select_quality'.tr()),
@@ -370,6 +371,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+
+    // 다이얼로그가 완전히 닫힌 후 실행됨 (Flutter 권장 패턴)
+    if (selectedQuality != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('품질이 ${_getQualityLabel(selectedQuality)}(으)로 변경되었습니다'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Widget _buildQualityOption(String value, String label, BuildContext dialogContext) {
@@ -394,21 +405,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               setState(() => _currentQuality = newValue);
             }
 
-            // 3. 다이얼로그 닫기 전에 메시지 준비
-            final message = '품질이 ${_getQualityLabel(newValue)}(으)로 변경되었습니다';
-
-            // 4. 다이얼로그 닫기
-            Navigator.pop(dialogContext);
-
-            // 5. SnackBar 표시 (부모 context 사용)
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(message),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            }
+            // 3. 선택한 값을 반환하며 다이얼로그 닫기
+            Navigator.pop(dialogContext, newValue);
           }
         },
       ),
